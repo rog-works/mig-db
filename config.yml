@@ -1,0 +1,8 @@
+dbs:
+  repo1/supplier1: db1/supplier1/dump.sql
+  repo1/supplier2: db1/supplier2/dump.sql
+  repo2/supplier1: db2/supplier1/dump.sql
+  repo2/supplier2: db2/supplier2/dump.sql
+models:
+   - repo1/supplier1/users
+   - repo1/supplier1/user_accounts
