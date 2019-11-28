@@ -1,57 +1,42 @@
-import './extentions/Object';
-import { DB, Loader, Record, Table, Meta } from './DB';
+import { Record, Meta } from './DB';
+import { Repository } from './Repository';
 
-export class Model {
-	public static get dsn(): string {
-		return '';
-	}
-
-	public static all<T>(): T[] {
-		return this.repo.all() as T[];
-	}
-
-	public static find<T>(id: number): T {
-		return this.repo.find(id) as T;
-	}
-
-	public static describe(): Meta {
-		return this.repo.describe();
-	}
-
-	private static get repo(): Repository {
-		return Repository.resolve(this.dsn);
-	}
+export interface IModel {
+	all(): IModel[];
+	describe(): Meta;
 }
 
-export class Repository {
-	public static resolve(dsn: string): Repository {
-		const tableName = dsn.match(/table=([^;]+)/)[1];
-		const db = Loader.load(dsn);
-		return new this(db, tableName);
+export abstract class Model implements IModel {
+	private static instantiate<T>(dsn: string, record: Record): T {
+		const ctor = require(`./${dsn}`).default;
+		return Object.assign(new ctor(), {record: () => record});
 	}
 
-	public constructor(
-		private readonly db: DB,
-		private readonly tableName: string
-	) {}
-
-	public all(): Record[] {
-		return this.table.records.values();
+	/* @implements */
+	public all(): this[] {
+		return this.repo().all().map(record => Model.instantiate<this>(this.dsn(), record));
 	}
 
-	public find(id: number): Record {
-		return this.table.records[id];
+	public find(id: number): this {
+		return Model.instantiate<this>(this.dsn(), this.repo().find(id));
 	}
 
+	/* @implements */
 	public describe(): Meta {
-		return {
-			table: this.table.name,
-			columns: this.table.columns,
-		}
+		return this.repo().describe();
 	}
 
-	private get table(): Table {
-		return this.db.tables[this.tableName];
+	protected record(): Record {
+		return {}; // XXX
+	}
+
+	protected abstract filename(): string;
+
+	private dsn(): string {
+		return this.filename().split('/').slice(-3).join('/').split('.')[0];
+	}
+
+	private repo(): Repository {
+		return Repository.get(this.dsn());
 	}
 }
-

@@ -1,8 +1,16 @@
+suppliers:
+  domain1:
+    - supplier1
+    - supplier2
+  domain2:
+    - supplier3
+    - supplier4
 dbs:
-  repo1/supplier1: db1/supplier1/dump.sql
-  repo1/supplier2: db1/supplier2/dump.sql
-  repo2/supplier1: db2/supplier1/dump.sql
-  repo2/supplier2: db2/supplier2/dump.sql
+  domain1/supplier1: domain1/supplier1/dump.sql
+  domain1/supplier2: domain1/supplier2/dump.sql
+  domain2/supplier1: domain2/supplier1/dump.sql
+  domain2/supplier2: domain2/supplier2/dump.sql
 models:
-   - repo1/supplier1/users
-   - repo1/supplier1/user_accounts
+  domain1:
+    User: users
+    UserAccount: user_accounts

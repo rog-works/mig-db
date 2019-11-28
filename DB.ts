@@ -1,9 +1,13 @@
 import fs from 'fs';
-import { Parser, Insert_Replace } from 'node-sql-parser';
+import { Parser, AST, Insert_Replace } from 'node-sql-parser';
 import './extentions';
-import { Config } from './Config';
 
 type Field = any; // XXX null | number | string;
+
+interface AstValue {
+	type: string;
+	value: Field;
+}
 
 interface Record {
 	[column: string]: Field;
@@ -13,8 +17,8 @@ type Records = {[id: number]: Record};
 
 interface Table {
 	name: string;
-	columns: string[];
-	records: Records;
+	columns: () => string[];
+	records: () => Records;
 }
 
 type Tables = {[name: string]: Table};
@@ -25,7 +29,6 @@ interface Meta {
 }
 
 interface DB {
-	dsn: string;
 	tables: Tables;
 }
 
@@ -34,37 +37,63 @@ type DBs = {[dsn: string]: DB};
 class Loader {
 	private static readonly dbs: DBs;
 
-	public static load(dsn: string): DB {
-		if (dsn in this.dbs) {
-			return this.dbs[dsn];
+	public static load(filePath: string): DB {
+		if (filePath in this.dbs) {
+			return this.dbs[filePath];
 		}
 
-		const tables = this.loadSql(Config.dbs(dsn)).map(this.parse);
+		const tables = this.loadSql(filePath).map(sql => this.parseTable(sql));
 		const nameOnTables = Object.assign({}, ...tables.map(table => ({[table.name]: table})));
-		this.dbs[dsn] = {
-			dsn: dsn,
+		this.dbs[filePath] = {
 			tables: nameOnTables,
 		};
-		return this.dbs[dsn];
+		return this.dbs[filePath];
 	}
 
-	private static loadSql(dsn: string): string[] {
-		return fs.readFileSync(Config.dbs(dsn), 'utf-8').split('\n');
+	private static loadSql(filePath: string): string[] {
+		return fs.readFileSync(filePath, 'utf-8').split('\n');
 	}
 
-	private static parse(sql: string): Table {
-		const ast = new Parser().astify(sql) as Insert_Replace;
-		const records = ast.values.map(row => this.parseRecord(ast.columns, row.value));
-		const idOnRecords = Object.assign({}, ...records.map(record => ({[record.id]: record})));
+	private static parseTable(sql: string): Table {
+		const matches = sql.match(/INSERT INTO `([^`]+)`/);
+		if (matches === null) {
+			throw Error(`SQL parse error. unexpected sql type. sql = ${sql}`);
+		}
+
+		const tableName = matches[1];
+		let ast = () => {
+			const _asts = new Parser().astify(sql) as AST[];
+			const _ast = _asts[0] as Insert_Replace;
+			ast = () => _ast;
+			return _ast;
+		};
 		return {
-			name: ast.table,
-			columns: ast.columns,
-			records: idOnRecords,
+			name: tableName,
+			columns: () => this.parseColumns(ast()),
+			records: () => this.parseRecords(ast()),
 		};
 	}
 
-	private static parseRecord(columns: string[], values: Field[]): Record {
-		const fields = columns.map((column, index) => ({[column]: values[index]}));
+	private static parseColumns(ast: Insert_Replace): string[] {
+		if (ast.columns === null) {
+			throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
+		}
+
+		return ast.columns;
+	}
+
+	private static parseRecords(ast: Insert_Replace): Records {
+		const columns = ast.columns;
+		if (columns === null) {
+			throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
+		}
+
+		const records = ast.values.map(row => this.parseRecord(columns, row.value));
+		return Object.assign({}, ...records.map(record => ({[record.id]: record})));
+	}
+
+	private static parseRecord(columns: string[], values: AstValue[]): Record {
+		const fields = columns.map((column, index) => ({[column]: values[index].value}));
 		return Object.assign({}, ...fields);
 	}
 }
