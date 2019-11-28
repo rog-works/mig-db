@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  app:
+    container_name: mig-db-app
+    image: mig-db-app:latest
+    build: ./
+    volumes:
+      - type: bind
+        source: ./
+        target: /app

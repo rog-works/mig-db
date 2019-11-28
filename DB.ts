@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { Parser } from 'node-sql-parser';
+import { Parser, Insert_Replace } from 'node-sql-parser';
 import './extentions';
 import { Config } from './Config';
 
@@ -53,8 +53,8 @@ class Loader {
 	}
 
 	private static parse(sql: string): Table {
-		const ast = new Parser().astify(sql);
-		const records = ast.values.map(vals => this.parseRecord(ast.columns, vals));
+		const ast = new Parser().astify(sql) as Insert_Replace;
+		const records = ast.values.map(row => this.parseRecord(ast.columns, row.value));
 		const idOnRecords = Object.assign({}, ...records.map(record => ({[record.id]: record})));
 		return {
 			name: ast.table,

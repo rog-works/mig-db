@@ -1,0 +1,30 @@
+{
+  "name": "mig-db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/Index.js",
+  "dependencies": {
+    "@types/js-yaml": "^3.12.1",
+    "@types/node": "^12.12.14",
+    "js-yaml": "^3.13.1",
+    "node-sql-parser": "^1.6.9",
+    "typescript": "^3.7.2"
+  },
+  "devDependencies": {
+    "ts-node": "^8.5.2"
+  },
+  "scripts": {
+    "build": "node_modules/typescript/bin/tsc",
+    "watch": "node_modules/typescript/bin/tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rog-works/mig-db.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rog-works/mig-db/issues"
+  },
+  "homepage": "https://github.com/rog-works/mig-db#readme"
+}
