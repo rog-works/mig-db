@@ -7,9 +7,26 @@ export interface IModel {
 }
 
 export abstract class Model implements IModel {
-	private static instantiate<T>(dsn: string, record: Record): T {
+	private static __models: {[key: string]: IModel};
+
+	private static instantiate<T extends IModel>(dsn: string, record: Record): T {
+		const cacheKey = `${dsn}/${record.id}`;
+		if (cacheKey in this.__models) {
+			return this.__models[cacheKey] as T;
+		}
+
 		const ctor = require(`./${dsn}`).default;
 		return Object.assign(new ctor(), {record: () => record});
+	}
+
+	protected readonly record: Record;
+
+	public constructor(record?: Record) {
+		Object.defineProperty(this, 'record', {
+			enumerable: false,
+			configurable: true,
+			get () { return record; },
+		});
 	}
 
 	/* @implements */
@@ -24,10 +41,6 @@ export abstract class Model implements IModel {
 	/* @implements */
 	public describe(): Meta {
 		return this.repo().describe();
-	}
-
-	protected record(): Record {
-		return {}; // XXX
 	}
 
 	protected abstract filename(): string;

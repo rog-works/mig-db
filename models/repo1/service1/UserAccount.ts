@@ -7,8 +7,12 @@ export class UserAccount extends Model {
 		return __filename;
 	}
 
+	public get id(): number {
+		return this.resolveId(Repo1User);
+	}
+
 	public get user_id(): number {
-		return Users.find(this.record().user_id).id;
+		return Users.find(this.record.user_id).id;
 	}
 }
 

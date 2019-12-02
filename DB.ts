@@ -1,4 +1,4 @@
-import fs from 'fs';
+import * as fs from 'fs';
 import { Parser, AST, Insert_Replace } from 'node-sql-parser';
 import './extentions';
 
@@ -88,8 +88,14 @@ class Loader {
 			throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
 		}
 
-		const records = ast.values.map(row => this.parseRecord(columns, row.value));
-		return Object.assign({}, ...records.map(record => ({[record.id]: record})));
+		const records: Records = {};
+		const idIndex = columns.indexOf('id');
+		for (const row of ast.values) {
+			const values = row.value as AstValue[];
+			const id = values[idIndex].value;
+			records[id] = this.parseRecord(columns, ast.values);
+		}
+		return records;
 	}
 
 	private static parseRecord(columns: string[], values: AstValue[]): Record {

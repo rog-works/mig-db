@@ -1,14 +1,14 @@
-import Config from './Config';
 import { Meta } from './DB';
 import { IModel } from './Model';
+import { ModelResolver } from './ModelResolver';
 
 export class Integrator implements IModel {
 	private readonly models: IModel[];
 
-	public constructor(domainName: string, modelName: string) {
-		this.models = Config.suppliers[domainName].map(supplierName => {
-			const dsn = [domainName, supplierName, modelName].join('/');
-			return this.resolveModel(dsn);
+	public constructor(repoName: string, modelName: string, serviceNames: string[]) {
+		this.models = serviceNames.map(serviceName => {
+			const dsn = ModelResolver.dsn(repoName, serviceName, modelName);
+			return ModelResolver.fromDsn(dsn);
 		});
 	}
 
@@ -18,9 +18,5 @@ export class Integrator implements IModel {
 
 	public describe(): Meta {
 		return this.models[0].describe(); // XXX
-	}
-
-	private resolveModel(dsn: string): IModel {
-		return require(`./${dsn}`).default;
 	}
 }

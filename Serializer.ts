@@ -3,41 +3,25 @@ import { IModel } from './Model';
 export type Methods = 'json' | 'sql';
 
 export class Serializer {
-	public static exec(method: Methods, model: IModel) {
+	public static factory(method: Methods) {
 		if (method === 'json') {
-			return this.jsonify(model);
+			return JsonSerializer.toString;
 		} else if (method === 'sql') {
-			return this.sqlify(model);
+			return SqlSerializer.toString;
 		} else {
 			throw Error(`Serialize error. unknown method. method = ${method}`);
 		}
 	}
-
-	public static jsonify(model: IModel): string {
-		return new JsonSerializer(model).toString();
-	}
-
-	public static sqlify(model: IModel): string {
-		return new SqlSerializer(model).toString();
-	}
 }
 
 class JsonSerializer {
-	public constructor(
-		private readonly model: IModel
-	) {}
-
-	public toString(): string {
-		return JSON.stringify({[this.model.describe().table]: this.model.all()});
+	public static toString(model: IModel): string {
+		return JSON.stringify({[model.describe().table]: model.all()});
 	}
 }
 
 class SqlSerializer {
-	public constructor(
-		private readonly model: IModel
-	) {}
-
-	public toString(): string {
+	public static toString(model: IModel): string {
 		return ''; // TODO impl
 	}
 }
