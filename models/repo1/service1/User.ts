@@ -1,10 +1,5 @@
-import { Model } from '../../../Model';
+import { User as Base } from '../../../bases/repo1/service1/User';
 
-export class User extends Model {
-	/* @ovdrride */
-	protected filename(): string {
-		return __filename;
-	}
-}
+export class User extends Base {}
 
 export default new User();

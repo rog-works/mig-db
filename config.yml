@@ -5,6 +5,8 @@ services:
   repo2:
     - service3
     - service4
+  externals1:
+    - service1
 dbs:
   repo1:
     service1: repo1/service1/dump.sql
@@ -12,15 +14,20 @@ dbs:
   repo2:
     service1: repo2/service1/dump.sql
     service2: repo2/service2/dump.sql
+  externals1:
+    service1: externals1/service1/dump.sql
 models:
   repo1:
     User: users
     UserAccount: user_accounts
+target_sercies:
+  repo1: &repo1_target_services
+    - service2
+  repo2: &repo2_target_services
+    - service4
 targets:
   repo1:
-    User: &repo1_target_services
-      - service1
-      - service2
-    UserAccount: <<: *repo1_target_services
+    User: *repo1_target_services
+    UserAccount: *repo1_target_services
   repo2:
-    - User
+    User: *repo2_target_services

@@ -43,11 +43,7 @@ export abstract class Model implements IModel {
 		return this.repo().describe();
 	}
 
-	protected abstract filename(): string;
-
-	private dsn(): string {
-		return this.filename().split('/').slice(-3).join('/').split('.')[0];
-	}
+	protected abstract dsn(): string;
 
 	private repo(): Repository {
 		return Repository.get(this.dsn());

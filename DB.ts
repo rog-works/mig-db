@@ -42,7 +42,8 @@ class Loader {
 			return this.dbs[filePath];
 		}
 
-		const tables = this.loadSql(filePath).map(sql => this.parseTable(sql));
+		const nameOnSqls = this.loadSqls(filePath);
+		const tables = nameOnSqls.keys().map(tableName => this.parseTable(tableName, nameOnSqls[tableName]));
 		const nameOnTables = Object.assign({}, ...tables.map(table => ({[table.name]: table})));
 		this.dbs[filePath] = {
 			tables: nameOnTables,
@@ -50,31 +51,47 @@ class Loader {
 		return this.dbs[filePath];
 	}
 
-	private static loadSql(filePath: string): string[] {
-		return fs.readFileSync(filePath, 'utf-8').split('\n');
+	private static loadSqls(filePath: string): {[tableName: string]: string[]} {
+		const lines = fs.readFileSync(filePath, 'utf-8').split('\n');
+		const sqls: {[tableName: string]: string[]} = {};
+		for (const line of lines) {
+			const matches = line.match(/(INSERT INTO|LOCK TABLE) `([^`]+)`/);
+			if (matches === null) {
+				continue;
+			}
+
+			const tableName = matches[1];
+			if (!(tableName in sqls)) {
+				sqls[tableName] = [];
+			}
+
+			sqls[tableName].push(line);
+		}
+		return sqls;
 	}
 
-	private static parseTable(sql: string): Table {
-		const matches = sql.match(/INSERT INTO `([^`]+)`/);
-		if (matches === null) {
-			throw Error(`SQL parse error. unexpected sql type. sql = ${sql}`);
-		}
-
-		const tableName = matches[1];
-		let ast = () => {
-			const _asts = new Parser().astify(sql) as AST[];
-			const _ast = _asts[0] as Insert_Replace;
-			ast = () => _ast;
-			return _ast;
+	private static parseTable(tableName: string, sqls: string[]): Table {
+		let astsFactory = () => {
+			return sqls.filter(sql => {
+				return /^INSERT INTO/.test(sql);
+			})
+			.map(sql => {
+				const _asts = new Parser().astify(sql) as AST[];
+				return _asts[0] as Insert_Replace;
+			});
 		};
+		let asts: Insert_Replace[] | null = null;
+		let columns: string[] | null = null;
+		let records: Records | null = null;
 		return {
 			name: tableName,
-			columns: () => this.parseColumns(ast()),
-			records: () => this.parseRecords(ast()),
+			columns: () => columns || (columns = this.parseColumns(asts || (asts = astsFactory()))),
+			records: () => records || (records = this.parseRecords(asts || (asts = astsFactory()))),
 		};
 	}
 
-	private static parseColumns(ast: Insert_Replace): string[] {
+	private static parseColumns(asts: Insert_Replace[]): string[] {
+		const ast = asts[0];
 		if (ast.columns === null) {
 			throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
 		}
@@ -82,19 +99,23 @@ class Loader {
 		return ast.columns;
 	}
 
-	private static parseRecords(ast: Insert_Replace): Records {
-		const columns = ast.columns;
-		if (columns === null) {
-			throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
+	private static parseRecords(asts: Insert_Replace[]): Records {
+		const records: Records = {};
+		for (const ast of asts) {
+			const columns = ast.columns;
+			if (columns === null) {
+				throw Error('SQL parse error. unexpected insert sql. column deffinition is nothing.');
+			}
+
+			const idIndex = columns.indexOf('id');
+			for (const index in ast.values) {
+				const row = ast.values[index];
+				const values = row.value as AstValue[];
+				const id = idIndex !== -1 ? values[idIndex].value : index;
+				records[id] = this.parseRecord(columns, ast.values);
+			}
 		}
 
-		const records: Records = {};
-		const idIndex = columns.indexOf('id');
-		for (const row of ast.values) {
-			const values = row.value as AstValue[];
-			const id = values[idIndex].value;
-			records[id] = this.parseRecord(columns, ast.values);
-		}
 		return records;
 	}
 
